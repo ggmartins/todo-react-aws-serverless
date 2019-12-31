@@ -3,17 +3,17 @@ import 'source-map-support/register'
 
 import { verify, decode } from 'jsonwebtoken'
 import { createLogger } from '../../utils/logger'
-//import { AxiosResponse } from 'axios'
+import * as axios from 'axios'
 import { Jwt } from '../../auth/Jwt'
 import { JwtPayload } from '../../auth/JwtPayload'
 
 const logger = createLogger('auth')
-//const axios = require("axios");
 
+// TODO: Provide a URL that can be used to download a certificate that can be used
+// to verify JWT token signature.
 // To get this URL you need to go to an Auth0 page -> Show Advanced Settings -> Endpoints -> JSON Web Key Set
-//const jwksUrl = 'https://XXX.auth0.com/.well-known/jwks.json'
-
-const jwks=JSON.parse('XXX') //TODO:
+const jwksUrl = process.env.AUTH0_JWKS_URL
+var jwks = null
 
 export const handler = async (
   event: CustomAuthorizerEvent
@@ -61,17 +61,15 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
   const { header } = jwt;
   
   logger.info('verifyingToken: getting url' );
-  //const response: AxiosResponse = axios.get(jwksUrl)
 
-  /*if (!response) {
-    console.log('Unable to fetch jwks url')
-    logger.error('Unable to fetch jwks url' );
-    throw new Error( 'Unable to fetch jwks url' );
-  } else {
-     console.log(response.data)
-  }*/
+  if (!jwks){
+    logger.info('caching jwks');
+    const response=await axios.default.get(jwksUrl)
+    jwks={}
+    jwks.keys=response.data.keys
+    logger.info('keys:'+jwks.keys);
+  }
 
-  //const jwtkeys = response.data.keys
   const jwtkeys = jwks.keys
 
   if ( !header || header.alg !== 'RS256' ) {
@@ -110,7 +108,6 @@ function getToken(authHeader: string): string {
 
   return token
 }
-
 
 function certToPEM( cert ) {
   let pem = cert.match( /.{1,64}/g ).join( '\n' );
