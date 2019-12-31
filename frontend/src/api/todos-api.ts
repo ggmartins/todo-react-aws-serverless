@@ -27,6 +27,7 @@ export async function createTodo(
       'Authorization': `Bearer ${idToken}`
     }
   })
+  console.log("INFO:createTodo:"+JSON.stringify(response))
   return response.data.item
 }
 
@@ -47,12 +48,25 @@ export async function deleteTodo(
   idToken: string,
   todoId: string
 ): Promise<void> {
+  console.log("INFO:deleteTodo1:"+JSON.stringify(todoId))
+  console.log(`${apiEndpoint}/todos/${todoId}`)
+  console.log(`${idToken}`)
   await Axios.delete(`${apiEndpoint}/todos/${todoId}`, {
     headers: {
       'Content-Type': 'application/json',
       'Authorization': `Bearer ${idToken}`
     }
+  }).then(function(response) {
+    console.log("here1")
+    console.log(response)
+  }).catch(function (error) {
+      // handle error
+      console.log("here2")
+      console.log(error);
+      console.log(error.response);
+      console.log(error.status);
   })
+  console.log("INFO:deleteTodo2:")
 }
 
 export async function getUploadUrl(
