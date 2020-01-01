@@ -1,32 +1,31 @@
 import 'source-map-support/register'
 import { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyHandler } from 'aws-lambda'
-import * as AWS  from 'aws-sdk'
 import { createLogger } from '../../utils/logger'
+import { Response } from '../../models/Response'
+import { TodoItem } from '../../models/TodoItem'
+import { TodoAccess } from '../../dataLayer/TodoAccess'
+import { getUserIdFromAuthorization } from '../../auth/utils'
 
-const docClient = new AWS.DynamoDB.DocumentClient()
-
-const todosTable = process.env.TODOS_TABLE
+const todoAccess = new TodoAccess(false)
 
 const logger = createLogger('gettodos')
 
 export const handler: APIGatewayProxyHandler = async (event: APIGatewayProxyEvent): Promise<APIGatewayProxyResult> => {
-  // TODO: Get all TODO items for a current user
-  console.log('Processing event: ', event)
+  const userId=getUserIdFromAuthorization(event.headers.Authorization)
   logger.info("running gettodos")
+  var items: TodoItem[]
+  var res: Response = { statusCode: 501, message: 'Not Implemented'};
 
-  const result = await docClient.scan({
-    TableName: todosTable
-  }).promise()
-
-  const items = result.Items
+  items = await todoAccess.qryTodoItem(userId, res)
 
   return {
-    statusCode: 200,
+    statusCode: res.statusCode,
     headers: {
       'Access-Control-Allow-Origin': '*'
     },
     body: JSON.stringify({
-      items
+      items : items,
+      message: res.message
     })
   }
 

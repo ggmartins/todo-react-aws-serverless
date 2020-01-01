@@ -15,9 +15,7 @@ const logger = createLogger('auth')
 const jwksUrl = process.env.AUTH0_JWKS_URL
 var jwks = null
 
-export const handler = async (
-  event: CustomAuthorizerEvent
-): Promise<CustomAuthorizerResult> => {
+export const handler = async (event: CustomAuthorizerEvent): Promise<CustomAuthorizerResult> => {
   logger.info('Authorizing a user', event.authorizationToken)
   try {
     const jwtToken = await verifyToken(event.authorizationToken)
@@ -89,12 +87,9 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
 
   const actualKey = key.publicKey || key.rsaPublicKey;
 
-
-  return verify(token, actualKey, { algorithms: [ 'RS256' ]}) as JwtPayload //as JwtToken
-  // TODO: Implement token verification
   // You should implement it similarly to how it was implemented for the exercise for the lesson 5
   // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
-  //return undefined
+  return verify(token, actualKey, { algorithms: [ 'RS256' ]}) as JwtPayload //as JwtToken
 }
 
 function getToken(authHeader: string): string {

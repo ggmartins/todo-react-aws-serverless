@@ -15,15 +15,15 @@ provider:
   region: ${opt:region, 'us-east-1'}
 
   environment:
-    AUTH0_JWKS_URL: 'https://XXX.auth0.com/.well-known/jwks.json'
+    AUTH0_JWKS_URL: 'https://XXXX.auth0.com/.well-known/jwks.json'
     TODOS_TABLE: Todos-${self:provider.stage}
     #IMAGES_TABLE: Images-${self:provider.stage}
     INDEX_NAME: TodosIdIndex
     IMAGE_ID_INDEX: ImageIdIndex
     #CONNECTIONS_TABLE: Connections-${self:provider.stage}
-    IMAGES_S3_BUCKET: serverless-project-images-XXX-${self:provider.stage}
+    IMAGES_S3_BUCKET: serverless-project-images-XXXX-${self:provider.stage}
     SIGNED_URL_EXPIRATION: 300
-    #THUMBNAILS_S3_BUCKET: serverless-project-thumbnail-XXX-${self:provider.stage}
+    #THUMBNAILS_S3_BUCKET: serverless-project-thumbnail-XXXX-${self:provider.stage}
     #AUTH_0_SECRET_ID: Auth0Secret-${self:provider.stage}
     #AUTH_0_SECRET_FIELD: auth0Secret
 
@@ -84,9 +84,14 @@ functions:
     iamRoleStatements:
       - Effect: Allow
         Action:
-          - dynamodb:Scan
+          - dynamodb:Query
           - dynamodb:GetItem
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}
+      - Effect: Allow
+        Action:
+          - dynamodb:GetItem #debug
+          - dynamodb:Query
+        Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/*
 
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
@@ -129,11 +134,11 @@ functions:
           - dynamodb:Query
         Resource: arn:aws:dynamodb:${self:provider.region}:*:table/${self:provider.environment.TODOS_TABLE}/index/*
 
-  DeleteTodoOptions:
+  DeleteTodoOptions: 
     handler: src/lambda/http/deleteTodo.handler
     events:
       - http:
-          method: options
+          method: options #TODO: fix this
           path: todos/{todoId}
           cors: true
   DeleteTodo:
@@ -262,25 +267,25 @@ resources:
       Type: AWS::DynamoDB::Table
       Properties:
         AttributeDefinitions:
-          - AttributeName: todoId
+          - AttributeName: userId #partitionKey
             AttributeType: S
-          - AttributeName: createdAt
+          - AttributeName: todoId #sortKey
             AttributeType: S
-          - AttributeName: userId
+          - AttributeName: createdAt #indexKey
             AttributeType: S
         KeySchema:
-          - AttributeName: todoId
+          - AttributeName: userId #partitionKey
             KeyType: HASH
-          - AttributeName: createdAt
+          - AttributeName: todoId #sortKey
             KeyType: RANGE
         BillingMode: PAY_PER_REQUEST
         TableName: ${self:provider.environment.TODOS_TABLE}
         LocalSecondaryIndexes:
           - IndexName: ${self:provider.environment.INDEX_NAME}
             KeySchema:
-              - AttributeName: todoId
+              - AttributeName: userId  #partitionKey
                 KeyType: HASH
-              - AttributeName: userId
+              - AttributeName: createdAt  #indexKey
                 KeyType: RANGE
             Projection:
               ProjectionType: ALL # What attributes will be copied to an index
@@ -312,29 +317,30 @@ resources:
     #        Projection:
     #          ProjectionType: ALL
 
-    #SNSTopicPolicy:
-    #  Type: AWS::SNS::TopicPolicy
-    #  Properties:
-    #    PolicyDocument:
-    #      Version: "2012-10-17"
-    #      Statement:
-    #        - Effect: Allow
-    #          Principal:
-    #            AWS: "*"
-    #          Action: sns:Publish
-    #          Resource:
-    #            !Ref ImagesTopic
-    #          Condition:
-    #            ArnLike:
-    #              AWS:SourceArn: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}
-    #    Topics:
-    #      - !Ref ImagesTopic
+    SNSTopicPolicy:
+      Type: AWS::SNS::TopicPolicy
+      Properties:
+        PolicyDocument:
+          Version: "2012-10-17"
+          Statement:
+            - Effect: Allow
+              Principal:
+                AWS: "*"
+              Action: sns:Publish
+              Resource:
+                !Ref ImagesTopic
+              Condition:
+                ArnLike:
+                  AWS:SourceArn: arn:aws:s3:::${self:provider.environment.IMAGES_S3_BUCKET}
+        Topics:
+          - !Ref ImagesTopic
 
-    #ImagesTopic:
-    #  Type: AWS::SNS::Topic
-    #  Properties:
-    #    DisplayName: Image bucket topic
-    #    TopicName: ${self:custom.topicName}
+    ImagesTopic:
+      Type: AWS::SNS::Topic
+      Properties:
+        DisplayName: Image bucket topic
+        TopicName: ${self:custom.topicName}
+        
     #KMSKey:
     #  Type: AWS::KMS::Key
     #  Properties:
